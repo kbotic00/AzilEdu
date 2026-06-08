@@ -1,0 +1,115 @@
+﻿@page "/domaci1"
+@rendermode InteractiveServer
+ 
+<h1>Status aplikacije</h1>
+ 
+<p class="@boja">@poruka1</p>
+<button @onclick="PromjeniBoju">Promjena boje</button>
+
+<hr />
+
+<p>Broj klikova: @brojKlikova</p>
+<button @onclick="Uvecaj">+</button>
+<button @onclick="Umanji">-</button>
+
+<hr />
+<label>
+    Ime:
+    <input @bind="ime" />
+    Prezime:
+    <input @bind="prezime" />
+</label>
+<p>ime : @ime prezime: @prezime</p>
+
+<hr />
+
+<button @onclick="PromijeniVidljivost"> prikazi / sakrij</button>
+@if (prikazi)
+{
+    <p>Ovo je skrivena poruka</p>
+}
+
+<hr />
+
+<ul>
+    @foreach (string film in najdrazifilmovi)
+    {
+        <li>@film</li>
+    }
+</ul>
+
+<hr />
+<label>
+    Novi task:
+    <input @bind="noviTask" />
+</label>
+<button @onclick="DodajTask">Dodaj</button>
+
+<ul>
+    @foreach (string task in lista)
+    {
+        <li>@task</li>
+    }
+</ul>
+<hr>
+<section class="status-kartica">
+    <h2>@nazivAplikacije</h2>
+    <p>@poruka</p>
+    <p> status : @status</p>
+</section>
+
+ 
+@code {
+    string poruka1 = "Aplikacija je spremna za rad.";
+    string boja = "tekst-zeleni";
+    void PromjeniBoju()
+    {
+        boja = "tekst-plavi";
+    }
+
+    int brojKlikova = 0;
+    void Uvecaj()
+    {
+        brojKlikova++;
+    }
+    void Umanji()
+    {
+        brojKlikova--;
+    }
+    
+    string ime="";
+    string prezime="";
+
+    bool prikazi = true;
+    void PromijeniVidljivost()
+    {
+        prikazi=!prikazi;
+    }
+
+    List<string> najdrazifilmovi = new()
+    {
+        "Me Before You",
+        "Harry Potter",
+        "Vrag Nosi Pradu"
+    };
+
+    List<string> lista= new()
+    {
+        "otici na faks",
+        "rijesiti zadatak"
+    };
+    string noviTask = "";
+    void DodajTask()
+    {
+        if(!string.IsNullOrWhiteSpace(noviTask))
+        {
+             lista.Add(noviTask);
+                noviTask = "";
+        }
+    }
+
+    string nazivAplikacije = "Moja Aplikacija";
+    string poruka = "Aplikacija radi ispravno";
+    string status = "OK";
+    
+}

@@ -1,0 +1,41 @@
+﻿button {
+    padding: 6px 16px;
+    background-color: lightgrey;
+    font-size: 14px;
+}
+
+button:hover {
+    background-color: #f0f0f0;
+}
+
+label {
+    padding: 6px 16px;
+    border: 2px solid grey;
+    background-color: lightgrey;
+}
+
+.tekst-zeleni {
+    color: green;
+}
+
+.tekst-plavi {
+    color: blue;
+}
+
+.status-kartica {
+    padding: 20px;
+    border-radius: 12px;
+    background-color: #f2f2f2;
+    max-width: 300px;
+    font-family: Arial, sans-serif;
+}
+
+.status-kartica h2 {
+    font-size: 18px;
+    color: dimgrey;
+}
+
+.status-kartica p {
+    font-size: 14px;
+    color: darkgreen;
+}
