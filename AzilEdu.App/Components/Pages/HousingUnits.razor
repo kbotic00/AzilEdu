@@ -1,0 +1,242 @@
+﻿@page "/housingUnits"
+@rendermode InteractiveServer
+@using AzilEdu.Shared.Models
+
+<PageTitle>HousingUnits</PageTitle>
+<br />
+<br />
+<MudText Typo="Typo.body1" Class="mb-4">
+    Pregled svih smještajnih jedinica u azilu. Ovdje možete pratiti kapacitete, popunjenost, status aktivnosti i informacije o održavanju pojedinih prostora za životinje.
+</MudText>
+<br />
+<br />
+<MudGrid Class="mb-4">
+    <MudItem xs="12" sm="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Ukupno smještaja</MudText>
+            <MudText Typo="Typo.h5">@TotalUnits</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Aktivne Jedinice</MudText>
+            <MudText Typo="Typo.h5">@ActiveUnits</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Pune Jedinice</MudText>
+            <MudText Typo="Typo.h5">@FullUnits</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle2">Slobodni Kapacitet</MudText>
+            <MudText Typo="Typo.h5">@FreeUnitsSpace</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" Class="mb-4">
+    <MudButton OnClick="@ShowAll">Sve</MudButton>
+    <MudButton OnClick="@ShowActive">Aktivne jedinice</MudButton>
+    <MudButton OnClick="@ShowFree">Slobodne jedinice</MudButton>
+    <MudButton OnClick="@ShowOccupied">Zauzete jedinice</MudButton>
+</MudButtonGroup>
+
+<MudTable Items="@FilteredHousingUnits" Hover="true" Striped="true" Bordered="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Slika</MudTh>
+        <MudTh>Naziv</MudTh>
+        <MudTh>Tip</MudTh>
+        <MudTh>Kapacitet</MudTh>
+        <MudTh>Popunjeno</MudTh>
+        <MudTh>Slobodna mjesta</MudTh>
+        <MudTh>Zadnje čišćenje</MudTh>
+        <MudTh>Status</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd DataLabel="Slika">
+            <MudAvatar Size="Size.Large">
+                <MudImage Src="@context.ImageUrl" Alt="@context.Name" />
+            </MudAvatar>
+        </MudTd>
+
+        <MudTd DataLabel="Naziv">
+            @context.Name
+        </MudTd>
+
+        <MudTd DataLabel="Tip">
+            @context.UnitType
+        </MudTd>
+
+        <MudTd DataLabel="Kapacitet">
+            @context.Capacity
+        </MudTd>
+
+        <MudTd DataLabel="Popunjeno">
+            @context.Occupied
+        </MudTd>
+
+        <MudTd DataLabel="Slobodna mjesta">
+            @(context.Capacity - context.Occupied)
+        </MudTd>
+
+        <MudTd DataLabel="Zadnje čišćenje">
+            @(context.LastCleanedAt?.ToString("dd.MM.yyyy") ?? "Nepoznato")
+        </MudTd>
+
+        <MudTd DataLabel="Status">
+            @if (!context.IsActive)
+            {
+                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">
+                    Neaktivna
+                </MudChip>
+            }
+            else if (context.Occupied >= context.Capacity)
+            {
+                <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">
+                    Puna
+                </MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">
+                    Dostupna
+                </MudChip>
+            }
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private string selectedStatus = "Sve";
+    private string selectedHousingFilter = "Sve";
+
+    private IEnumerable<HousingUnit> FilteredHousingUnits =>
+        selectedStatus switch
+        {
+            "Aktivne jedinice" => housingUnits.Where(unit => unit.IsActive),
+            "Zauzete jedinice" => housingUnits.Where(unit => GetFreeCapacity(unit) == 0),
+            "Slobodne jedinice" => housingUnits.Where(unit => unit.IsActive && GetFreeCapacity(unit) > 0),
+            _ => housingUnits
+        };
+    private void ShowAll()
+    {
+        selectedStatus = "Sve";
+    }
+
+    private void ShowFree()
+    {
+        selectedStatus = "Slobodne jedinice";
+    }
+
+    private void ShowOccupied()
+    {
+        selectedStatus = "Zauzete jedinice";
+    }
+
+    private void ShowActive()
+    {
+        selectedStatus = "Aktivne jedinice";
+    }
+
+    private int GetFreeCapacity(HousingUnit unit)
+    {
+        return unit.Capacity - unit.Occupied;
+    }
+    private string GetCleaningDateText(HousingUnit unit)
+    {
+        if (unit.LastCleanedAt.HasValue)
+        {
+            return unit.LastCleanedAt.Value.ToShortDateString();
+        }
+
+        return "Nije uneseno";
+    }
+    private List<HousingUnit> housingUnits = new()
+    {
+        new HousingUnit
+        {
+            Id = 1,
+            Name = "Boks A1",
+            UnitType = "boks",
+            Capacity = 2,
+            Occupied = 2,
+            LastCleanedAt = DateTime.Now.AddDays(-1),
+            IsActive = true,
+            ImageUrl = "box-1.webp",
+            Note = "Puni kapacitet"
+        },
+        new HousingUnit
+        {
+            Id = 2,
+            Name = "Boks A2",
+            UnitType = "boks",
+            Capacity = 3,
+            Occupied = 1,
+            LastCleanedAt = DateTime.Now.AddDays(-3),
+            IsActive = true,
+            ImageUrl = "box-2.webp",
+            Note = "Jedan pas smješten"
+        },
+        new HousingUnit
+        {
+            Id = 3,
+            Name = "Karantena A3",
+            UnitType = "karantena",
+            Capacity = 1,
+            Occupied = 1,
+            LastCleanedAt = null,
+            IsActive = true,
+            ImageUrl = "quarantine.webp",
+            Note = "Pas u promatranju"
+        },
+        new HousingUnit
+        {
+            Id = 4,
+            Name = "Boks A4",
+            UnitType = "boks",
+            Capacity = 2,
+            Occupied = 0,
+            LastCleanedAt = DateTime.Now.AddDays(-10),
+            IsActive = false,
+            ImageUrl = "inactive-unit.webp",
+            Note = "Izvan uporabe zbog održavanja"
+        },
+        new HousingUnit
+        {
+            Id = 5,
+            Name = "Soba za mačke A5",
+            UnitType = "macke",
+            Capacity = 4,
+            Occupied = 2,
+            LastCleanedAt = DateTime.Now.AddHours(-12),
+            IsActive = true,
+            ImageUrl = "cat-room.webp",
+            Note = "Prostor za mačke"
+        },
+        new HousingUnit
+        {
+            Id = 6,
+            Name = "Dvorišni prostor A6",
+            UnitType = "dvoriste",
+            Capacity = 3,
+            Occupied = 0,
+            LastCleanedAt = DateTime.Now.AddDays(-5),
+            IsActive = true,
+            ImageUrl = "yard-unit.webp",
+            Note = "Vanjski prostor za životinje"
+        }
+    };
+    private int TotalUnits => housingUnits.Count;
+
+    private int ActiveUnits => housingUnits.Count(housingUnit => housingUnit.IsActive);
+
+    private int FullUnits => housingUnits.Count(housingUnit => (housingUnit.Capacity == housingUnit.Occupied));
+
+    private int FreeUnitsSpace => housingUnits.Sum(housingUnit => (housingUnit.Capacity - housingUnit.Occupied));
+
+
+}
