@@ -1,48 +1,106 @@
-using Microsoft.AspNetCore.Http.HttpResults;
-using System.Text.Json.Serialization;
+using AzilEdu.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using AzilEdu.Shared.Models;
 
-var builder = WebApplication.CreateSlimBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonSerializerContext.Default);
-});
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddDbContext<AzilEduDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-Todo[] sampleTodos =
-[
-    new(1, "Walk the dog"),
-    new(2, "Do the dishes", DateOnly.FromDateTime(DateTime.Now)),
-    new(3, "Do the laundry", DateOnly.FromDateTime(DateTime.Now.AddDays(1))),
-    new(4, "Clean the bathroom"),
-    new(5, "Clean the car", DateOnly.FromDateTime(DateTime.Now.AddDays(2)))
-];
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
 
-var todosApi = app.MapGroup("/todos");
-todosApi.MapGet("/", () => sampleTodos)
-        .WithName("GetTodos");
-
-todosApi.MapGet("/{id}", Results<Ok<Todo>, NotFound> (int id) =>
-    sampleTodos.FirstOrDefault(a => a.Id == id) is { } todo
-        ? TypedResults.Ok(todo)
-        : TypedResults.NotFound())
-    .WithName("GetTodoById");
-
-app.Run();
-
-public record Todo(int Id, string? Title, DateOnly? DueBy = null, bool IsComplete = false);
-
-[JsonSerializable(typeof(Todo[]))]
-internal partial class AppJsonSerializerContext : JsonSerializerContext
+using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<AzilEduDbContext>();
 
+    await db.Database.MigrateAsync();
+
+    if (!await db.HousingUnits.AnyAsync())
+    {
+        db.HousingUnits.AddRange(
+            new HousingUnit
+            {
+                Name = "Boks A1",
+                UnitType = "boks",
+                Capacity = 2,
+                Occupied = 2,
+                LastCleanedAt = DateTime.Now.AddDays(-1),
+                IsActive = true,
+                ImageUrl = "/images/housing-units/box-1.webp",
+                Note = "Puni kapacitet"
+            },
+            new HousingUnit
+            {
+                Name = "Boks A2",
+                UnitType = "boks",
+                Capacity = 3,
+                Occupied = 1,
+                LastCleanedAt = DateTime.Now.AddDays(-3),
+                IsActive = true,
+                ImageUrl = "/images/housing-units/box-2.webp",
+                Note = "Jedan pas smješten"
+            },
+            new HousingUnit
+            {
+                Name = "Karantena A3",
+                UnitType = "karantena",
+                Capacity = 1,
+                Occupied = 1,
+                LastCleanedAt = null,
+                IsActive = true,
+                ImageUrl = "/images/housing-units/quarantine.webp",
+                Note = "Pas u promatranju"
+            },
+            new HousingUnit
+            {
+                Name = "Boks A4",
+                UnitType = "boks",
+                Capacity = 2,
+                Occupied = 0,
+                LastCleanedAt = DateTime.Now.AddDays(-10),
+                IsActive = false,
+                ImageUrl = "/images/housing-units/inactive-unit.webp",
+                Note = "Izvan uporabe zbog održavanja"
+            },
+            new HousingUnit
+            {
+                Name = "Soba za mačke A5",
+                UnitType = "macke",
+                Capacity = 4,
+                Occupied = 2,
+                LastCleanedAt = DateTime.Now.AddHours(-12),
+                IsActive = true,
+                ImageUrl = "/images/housing-units/cat-room.webp",
+                Note = "Prostor za mačke"
+            },
+            new HousingUnit
+            {
+                Name = "Dvorišni prostor A6",
+                UnitType = "dvoriste",
+                Capacity = 3,
+                Occupied = 0,
+                LastCleanedAt = DateTime.Now.AddDays(-5),
+                IsActive = true,
+                ImageUrl = "/images/housing-units/yard-unit.webp",
+                Note = "Vanjski prostor za životinje"
+            }
+        );
+
+        await db.SaveChangesAsync();
+    }
 }
+app.Run();
