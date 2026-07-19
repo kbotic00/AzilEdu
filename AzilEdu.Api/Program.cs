@@ -102,5 +102,59 @@ using (var scope = app.Services.CreateScope())
 
         await db.SaveChangesAsync();
     }
+
+    if (!await db.VolunteerStatuses.AnyAsync())
+    {
+        db.VolunteerStatuses.AddRange(
+            new VolunteerStatus { Name = "Novi" },
+            new VolunteerStatus { Name = "Aktivan" },
+            new VolunteerStatus { Name = "Privremeno nedostupan" },
+            new VolunteerStatus { Name = "Neaktivan" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.DonorTypes.AnyAsync())
+    {
+        db.DonorTypes.AddRange(
+            new DonorType { Name = "Fizička osoba" },
+            new DonorType { Name = "Pravna osoba" },
+            new DonorType { Name = "Udruga" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.DonorStatuses.AnyAsync())
+    {
+        db.DonorStatuses.AddRange(
+            new DonorStatus { Name = "Aktivan" },
+            new DonorStatus { Name = "Neaktivan" },
+            new DonorStatus { Name = "Potencijalni" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.EmployeePositions.AnyAsync())
+    {
+        db.EmployeePositions.AddRange(
+            new EmployeePosition { Name = "Veterinar" },
+            new EmployeePosition { Name = "Njegovatelj" },
+            new EmployeePosition { Name = "Administrativni radnik" },
+            new EmployeePosition { Name = "Vozač" },
+            new EmployeePosition { Name = "Čistač" }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    if (!await db.EmployeeStatuses.AnyAsync())
+    {
+        db.EmployeeStatuses.AddRange(
+            new EmployeeStatus { Name = "Aktivan" },
+            new EmployeeStatus { Name = "Na bolovanju" },
+            new EmployeeStatus { Name = "Na godišnjem" },
+            new EmployeeStatus { Name = "Neaktivan" }
+        );
+        await db.SaveChangesAsync();
+    }
 }
 app.Run();

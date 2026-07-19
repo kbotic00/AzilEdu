@@ -1,0 +1,148 @@
+@page "/donors"
+@rendermode InteractiveServer
+@using AzilEdu.Shared.DTOs
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudText Typo="Typo.h4" GutterBottom="true">Donatori</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="5">
+            <MudTextField @bind-Value="searchString"
+                          Label="Pretraži donatora"
+                          Placeholder="Ime, prezime, organizacija ili email"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="string"
+                       Label="Tip donatora"
+                       @bind-Value="selectedType"
+                       Variant="Variant.Outlined"
+                       Clearable="true">
+                @foreach (var t in typeList)
+                {
+                    <MudSelectItem Value="@t.Name">@t.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="string"
+                       Label="Status"
+                       @bind-Value="selectedStatus"
+                       Variant="Variant.Outlined"
+                       Clearable="true">
+                @foreach (var s in statusList)
+                {
+                    <MudSelectItem Value="@s.Name">@s.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="1" Class="d-flex align-center">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="ResetFilters">
+                Očisti
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@donors"
+          Filter="FilterDonors"
+          Hover="true"
+          Striped="true"
+          Bordered="true"
+          Dense="true">
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<DonorDto, object>(x => x.LastName)">Prezime</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<DonorDto, object>(x => x.FirstName)">Ime</MudTableSortLabel></MudTh>
+        <MudTh>Organizacija</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Grad</MudTh>
+        <MudTh>Tip</MudTh>
+        <MudTh>Status</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>@context.LastName</MudTd>
+        <MudTd>@context.FirstName</MudTd>
+        <MudTd>@context.OrganizationName</MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@context.City</MudTd>
+        <MudTd>@context.DonorTypeName</MudTd>
+        <MudTd>
+            <MudChip T="string" Color="@GetStatusColor(context.DonorStatusName)">
+                @context.DonorStatusName
+            </MudChip>
+        </MudTd>
+    </RowTemplate>
+
+    <NoRecordsContent>
+        <MudText Typo="Typo.body1" Class="pa-4">
+            Nema rezultata za zadane kriterije pretrage i filtera.
+        </MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<DonorDto> donors = new();
+    private List<LookupDto> typeList = new();
+    private List<LookupDto> statusList = new();
+    private string searchString = string.Empty;
+    private string? selectedType;
+    private string? selectedStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        typeList = await Http.GetFromJsonAsync<List<LookupDto>>("api/donortypes") ?? new();
+        statusList = await Http.GetFromJsonAsync<List<LookupDto>>("api/donorstatuses") ?? new();
+        donors = await Http.GetFromJsonAsync<List<DonorDto>>("api/donors") ?? new();
+    }
+
+    private bool FilterDonors(DonorDto d)
+    {
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var term = searchString.Trim().ToLower();
+            var matches =
+                d.FirstName.ToLower().Contains(term) ||
+                d.LastName.ToLower().Contains(term) ||
+                d.OrganizationName.ToLower().Contains(term) ||
+                d.Email.ToLower().Contains(term);
+            if (!matches) return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedType) &&
+            !string.Equals(d.DonorTypeName, selectedType, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(selectedStatus) &&
+            !string.Equals(d.DonorStatusName, selectedStatus, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
+    }
+
+    private void ResetFilters()
+    {
+        searchString = string.Empty;
+        selectedType = null;
+        selectedStatus = null;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Aktivan" => Color.Success,
+        "Potencijalni" => Color.Info,
+        "Neaktivan" => Color.Error,
+        _ => Color.Default
+    };
+}

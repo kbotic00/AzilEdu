@@ -1,0 +1,165 @@
+﻿@page "/volunteers"
+@rendermode InteractiveServer
+@using AzilEdu.Shared.DTOs
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Volonteri</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mb-4"
+           OnClick="@(() => Navigation.NavigateTo("/volunteers/create"))">
+    Novi volonter
+</MudButton>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudTextField @bind-Value="searchString"
+                          Label="Pretraži volontere"
+                          Placeholder="Ime, prezime ili email"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search" />
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="string"
+                       Label="Status"
+                       @bind-Value="selectedStatus"
+                       Variant="Variant.Outlined"
+                       Clearable="true">
+                @foreach (var s in statusList)
+                {
+                    <MudSelectItem Value="@s.Name">@s.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="string"
+                       Label="Sortiraj po"
+                       @bind-Value="sortBy"
+                       Variant="Variant.Outlined">
+                <MudSelectItem Value="@("firstName")">Imenu</MudSelectItem>
+                <MudSelectItem Value="@("lastName")">Prezimenu</MudSelectItem>
+                <MudSelectItem Value="@("email")">Emailu</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="2" Class="d-flex align-center">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="ResetFilters">
+                Očisti
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@volunteers"
+          Filter="FilterVolunteers"
+          Hover="true"
+          Striped="true"
+          Bordered="true"
+          Dense="true">
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<VolunteerDto, object>(x => x.FirstName)">Ime</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<VolunteerDto, object>(x => x.LastName)">Prezime</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<VolunteerDto, object>(x => x.Email)">Email</MudTableSortLabel></MudTh>
+        <MudTh>Telefon</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>@context.FirstName</MudTd>
+        <MudTd>@context.LastName</MudTd>
+        <MudTd>@context.Email</MudTd>
+        <MudTd>@context.Phone</MudTd>
+        <MudTd>
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">
+                @context.Status
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            <MudButton Variant="Variant.Text" Color="Color.Primary"
+                       OnClick="@(() => Navigation.NavigateTo($"/volunteers/edit/{context.Id}"))">
+                Uredi
+            </MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error"
+                       OnClick="@(() => DeleteVolunteer(context.Id))">
+                Obriši
+            </MudButton>
+        </MudTd>
+    </RowTemplate>
+
+    <NoRecordsContent>
+        <MudText Typo="Typo.body1" Class="pa-4">
+            Nema rezultata za zadane kriterije pretrage i filtera.
+        </MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<VolunteerDto> volunteers = new();
+    private List<LookupDto> statusList = new();
+    private string searchString = string.Empty;
+    private string? selectedStatus;
+    private string sortBy = "firstName";
+
+    protected override async Task OnInitializedAsync()
+    {
+        statusList = await Http.GetFromJsonAsync<List<LookupDto>>("api/volunteerstatuses") ?? new();
+        await LoadVolunteers();
+    }
+
+    private async Task LoadVolunteers()
+    {
+        volunteers = await Http.GetFromJsonAsync<List<VolunteerDto>>($"api/volunteers?sortBy={sortBy}") ?? new();
+    }
+
+    private bool FilterVolunteers(VolunteerDto v)
+    {
+        if (!string.IsNullOrWhiteSpace(searchString))
+        {
+            var term = searchString.Trim().ToLower();
+            var matches =
+                v.FirstName.ToLower().Contains(term) ||
+                v.LastName.ToLower().Contains(term) ||
+                v.Email.ToLower().Contains(term);
+            if (!matches) return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedStatus) &&
+            !string.Equals(v.Status, selectedStatus, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
+    }
+
+    private void ResetFilters()
+    {
+        searchString = string.Empty;
+        selectedStatus = null;
+        sortBy = "firstName";
+    }
+
+    private async Task DeleteVolunteer(int id)
+    {
+        var response = await Http.DeleteAsync($"api/volunteers/{id}");
+        if (response.IsSuccessStatusCode)
+            volunteers = volunteers.Where(v => v.Id != id).ToList();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Aktivan" => Color.Success,
+        "Novi" => Color.Info,
+        "Privremeno nedostupan" => Color.Warning,
+        "Neaktivan" => Color.Error,
+        _ => Color.Default
+    };
+}

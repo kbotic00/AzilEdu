@@ -1,0 +1,58 @@
+﻿@page "/volunteers/create"
+@rendermode InteractiveServer
+@using AzilEdu.Shared.DTOs
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Novi volonter</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="@Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudStack Spacing="2">
+    <MudTextField @bind-Value="model.FirstName" Label="Ime" Required="true" Immediate="true" />
+    <MudTextField @bind-Value="model.LastName" Label="Prezime" Required="true" Immediate="true" />
+    <MudTextField @bind-Value="model.Email" Label="Email" Immediate="true" />
+    <MudTextField @bind-Value="model.Phone" Label="Telefon" Immediate="true" />
+    <MudTextField @bind-Value="model.Skills" Label="Vještine" Immediate="true" />
+    <MudTextField @bind-Value="model.Notes" Label="Napomena" Lines="3" Immediate="true" />
+    <MudSelect T="int" Label="Status" @bind-Value="model.VolunteerStatusId" Variant="Variant.Outlined">
+        @foreach (var s in statusList)
+        {
+            <MudSelectItem Value="@s.Id">@s.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@Save">Spremi</MudButton>
+</MudStack>
+
+@code {
+    private SaveVolunteerDto model = new();
+    private string? errorMessage;
+    private List<LookupDto> statusList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        statusList = await Http.GetFromJsonAsync<List<LookupDto>>("api/volunteerstatuses") ?? new();
+        if (statusList.Any())
+            model.VolunteerStatusId = statusList.First().Id;
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(model.FirstName) || string.IsNullOrWhiteSpace(model.LastName))
+        {
+            errorMessage = "Ime i prezime su obavezni.";
+            return;
+        }
+
+        var response = await Http.PostAsJsonAsync("api/volunteers", model);
+
+        if (response.IsSuccessStatusCode)
+            Navigation.NavigateTo("/volunteers");
+        else
+            errorMessage = $"Greška: {(int)response.StatusCode}";
+    }
+}
